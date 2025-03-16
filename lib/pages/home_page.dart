@@ -1,56 +1,91 @@
 import 'package:flutter/material.dart';
 import 'package:todo/lista_usuarios_widget.dart';
 import 'package:todo/nome_input_widget.dart';
+import 'usuario_service.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, required this.title});
-
   final String title;
+
+  const HomePage({super.key, required this.title});
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
-  final TextEditingController nomeInputController = TextEditingController();
-  final List<String> listaDeUsuarios = ["Arthur", "Fernando", "Tulio Gomes"];
+  final UsuarioService _usuarioService = UsuarioService();
+  final TextEditingController _controller = TextEditingController();
+  List<Map<String, dynamic>> _listaDeUsuarios = [];
 
-  void adicionarUsuario() {
-    if (nomeInputController.text.isNotEmpty) {
+  @override
+  void initState() {
+    super.initState();
+    _carregarUsuarios();
+  }
+
+  Future<void> _carregarUsuarios() async {
+    try {
+      final usuarios = await _usuarioService.fetchUsuarios();
       setState(() {
-        listaDeUsuarios.add(nomeInputController.text);
-        nomeInputController.clear();
+        _listaDeUsuarios = usuarios;
       });
+    } catch (e) {
+      _mostrarErro("Erro ao carregar usuários: $e");
     }
   }
 
-  void removerUsuario(int index) {
-    setState(() {
-      listaDeUsuarios.removeAt(index);
-    });
+  Future<void> _adicionarUsuario() async {
+    if (_controller.text.isEmpty) return;
+
+    try {
+      await _usuarioService.adicionarUsuario(_controller.text);
+      await _carregarUsuarios();
+      _controller.clear();
+    } catch (e) {
+      _mostrarErro("Erro ao adicionar usuário: $e");
+    }
+  }
+
+ Future<void> _removerUsuario(int index) async {
+  try {
+    final usuarioId = _listaDeUsuarios[index]["id"].toString();
+    await _usuarioService.removerUsuario(usuarioId);
+    
+  
+    await _carregarUsuarios();
+    
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Erro ao excluir: ${e.toString()}")),
+    );
+  }
+}
+
+  void _mostrarErro(String mensagem) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(mensagem)),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
       ),
       body: Column(
         children: [
-          NomeInputWidget(controller: nomeInputController),
-          const SizedBox(height: 20),
+          NomeInputWidget(controller: _controller),
           Expanded(
             child: ListaUsuariosWidget(
-              listaDeUsuarios: listaDeUsuarios,
-              onRemoverUsuario: removerUsuario,
+              listaDeUsuarios: _listaDeUsuarios,
+              onRemoverUsuario: _removerUsuario,
             ),
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: adicionarUsuario,
+        onPressed: _adicionarUsuario,
         child: const Icon(Icons.add),
       ),
     );

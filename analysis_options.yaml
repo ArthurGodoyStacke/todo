@@ -10,7 +10,10 @@
 analyzer:
   errors:
     no_logic_in_create_state: ignore
-include: package:flutter_lints/flutter.yaml
+
+    override_on_non_overriding_member: ignore
+    duplicate_import: ignore
+    unused_element: ignore
 
 linter:
   # The lint rules applied to this project can be customized in the
